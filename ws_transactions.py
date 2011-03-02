@@ -117,7 +117,7 @@ class WSTransactionService(netsvc.Service):
         cursor = self.cursors[uid][transaction_id]
         return cursor
 
-    def execute(self, dbname, transaction_id, uid, passwd, obj, method, *args,
+    def execute(self, dbname, uid, passwd, transaction_id, obj, method, *args,
                 **kw):
         """Executes code with transaction_id.
         """
@@ -134,7 +134,7 @@ class WSTransactionService(netsvc.Service):
             raise exc
         return res
 
-    def rollback(self, dbname, transaction_id, uid, passwd):
+    def rollback(self, dbname, uid, passwd, transaction_id):
         """Rollbacks XML-RPC transaction.
         """
         security.check(dbname, uid, passwd)
@@ -143,7 +143,7 @@ class WSTransactionService(netsvc.Service):
                  % transaction_id)
         return sync_cursor.rollback()
 
-    def commit(self, dbname, transaction_id, uid, passwd):
+    def commit(self, dbname, uid, passwd, transaction_id):
         """Commit XML-RPC transaction.
         """
         security.check(dbname, uid, passwd)
@@ -152,7 +152,7 @@ class WSTransactionService(netsvc.Service):
                  % transaction_id)
         return sync_cursor.commit()
 
-    def close(self, dbname, transaction_id, uid, passwd):
+    def close(self, dbname, uid, passwd, transaction_id):
         """Closes XML-RPC transaction.
         """
         security.check(dbname, uid, passwd)
