@@ -159,7 +159,7 @@ class WSTransactionService(netsvc.Service):
         sync_cursor = self.get_cursor(uid, transaction_id)
         self.log(netsvc.LOG_INFO, 'Closing transaction ID: %s' % transaction_id)
         res = sync_cursor.close()
-        del self.cursors[transaction_id]
+        del self.cursors[uid][transaction_id]
         return res
 
 WSTransactionService()
