@@ -44,7 +44,7 @@ class WSCursor(object):
         return datetime.now() > self.last_access + timedelta(seconds=self.ttl)
 
 class WSTransactionService(netsvc.Service):
-    """Sync service to allow XML-RPC transactions.
+    """Service to allow XML-RPC transactions.
     """
     def __init__(self, name='ws_transaction'):
         """Init method.
