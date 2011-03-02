@@ -71,15 +71,16 @@ class WSTransactionService(netsvc.Service):
         """Clean abandoned cursors.
         """
         self.log(netsvc.LOG_INFO, 'Searching for abandoned transactions...')
-        for trans, cursor in self.cursors.items():
-            if cursor.is_abandoned():
-                last_access = cursor.last_accessed.strftime('%Y-%m-%d %H:%M:%S')
-                self.log(netsvc.LOG_INFO, 'Deleting transaction ID: %i. '
-                                          'Last accessed on %s'
-                                          % (trans, last_access))
-                cursor.rollback()
-                cursor.close()
-                del self.cursors[trans]
+        for user in self.cursors:
+            for trans, cursor in self.cursors[user].items():
+                if cursor.is_abandoned():
+                    l_acc = cursor.last_accessed.strftime('%Y-%m-%d %H:%M:%S')
+                    self.log(netsvc.LOG_INFO, 'Deleting transaction ID: %i. '
+                                              'Last accessed on %s'
+                                              % (trans, l_acc))
+                    cursor.rollback()
+                    cursor.close()
+                    del self.cursors[trans]
     
     def get_transaction(self, dbname, uid, transaction_id):
         """Get transaction for all XML-RPC.
