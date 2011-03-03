@@ -29,8 +29,8 @@
     "name": "WebService Transactions",
     "version": "0.1",
     "depends": ["base"],
-    "author": "Eduard Carreras <ecn@lapunxa.com>",
-    "url": "https://github.com/lapunxa/lpx_ws_transactions",
+    "author": "Eduard Carreras <ecarreras@gmail.com>",
+    "website": "https://github.com/lapunxa/lpx_ws_transactions",
     "category": "Base",
     "description": """
     This module provide :
