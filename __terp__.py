@@ -27,10 +27,10 @@
 ##############################################################################
 {
     "name": "WebService Transactions",
-    "version": "0.1",
+    "version": "0.1.1",
     "depends": ["base"],
     "author": "Eduard Carreras <ecarreras@gmail.com>",
-    "website": "https://github.com/lapunxa/lpx_ws_transactions",
+    "website": "https://github.com/gisce/ws_transactions",
     "category": "Base",
     "description": """
     This module provide :
