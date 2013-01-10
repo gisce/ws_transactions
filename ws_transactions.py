@@ -83,6 +83,7 @@ class WSTransactionService(netsvc.Service):
         self.exportMethod(self.rollback)
         self.exportMethod(self.commit)
         self.exportMethod(self.close)
+        self.exportMethod(self.list)
         self.log(netsvc.LOG_INFO, 'Ready for webservices transactions...')
         self.tid = 0
         self.tid_protect = threading.Semaphore()
@@ -92,6 +93,18 @@ class WSTransactionService(netsvc.Service):
         """
         logger = netsvc.Logger()
         logger.notifyChannel('ws-transaction', log_level, message)
+
+    def list(self):
+        for user in self.cursors:
+            for trans, cursor in self.cursors[user].items():
+                self.log(
+                    netsvc.LOG_INFO,
+                    'WSCursor opened by uid: %s id: %s tid: %s pid: %s '
+                    'last accessed at %s.'
+                    % (user, trans, cursor.psql_tid, cursor.psql_pid,
+                       cursor.last_accessed,strftime('%Y-%m-%d %H:%M:%S'))
+                )
+                
         
     def clean(self):
         """Clean abandoned cursors.
