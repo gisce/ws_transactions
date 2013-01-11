@@ -103,7 +103,7 @@ class WSTransactionService(netsvc.Service):
                     'WSCursor opened by uid: %s id: %s tid: %s pid: %s '
                     'last accessed at %s.'
                     % (user, trans, cursor.psql_tid, cursor.psql_pid,
-                       cursor.last_accessed,strftime('%Y-%m-%d %H:%M:%S'))
+                       cursor.last_access.strftime('%Y-%m-%d %H:%M:%S'))
                 )
 
     def kill(self, dbname, uid, passwd, transaction_id):
