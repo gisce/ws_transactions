@@ -174,7 +174,7 @@ class WSTransactionService(netsvc.Service):
         try:
             self.log(netsvc.LOG_DEBUG,
                 'Executing from transaction ID: %s TID: %s PID: %s'
-                % (transaction_id, cursor.psql_tid, cursor.psql_pid)
+                % (transaction_id, sync_cursor.psql_tid, sync_cursor.psql_pid)
             )
             res = pool.execute_cr(cursor, uid, obj, method, *args, **kw)
         except Exception, exc:
