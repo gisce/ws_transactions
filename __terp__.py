@@ -27,7 +27,7 @@
 ##############################################################################
 {
     "name": "WebService Transactions",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "depends": ["base"],
     "author": "Eduard Carreras <ecarreras@gmail.com>",
     "website": "https://github.com/gisce/ws_transactions",
