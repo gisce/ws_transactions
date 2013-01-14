@@ -48,6 +48,24 @@ class WSCursor(object):
         """
         self.last_access = datetime.now()
         return self._cursor
+
+    @property
+    def psql_tid(self):
+        """Get current PostgreSQL transaction ID
+        """
+        self._cursor.execute('''
+            select txid_current()
+        ''')
+        return self._cursor.fetchone()[0]
+
+    @property
+    def psql_pid(self):
+        """Get current PostgreSQL Process ID
+        """
+        self._cursor.execute('''
+            select pg_backend_pid()
+        ''')
+        return self._cursor.fetchone()[0]
     
     def close(self):
         """Closes the cursor.
@@ -137,8 +155,10 @@ class WSTransactionService(netsvc.Service):
         database = pooler.get_db_and_pool(dbname)[0]
         cursor = database.cursor()
         sync_cursor = WSCursor(cursor)
-        self.log(netsvc.LOG_INFO, 'Creating a new transaction ID: %s'
-                 % transaction_id)
+        self.log(netsvc.LOG_INFO,
+            'Creating a new transaction ID: %s TID: %s PID: %s'
+            % (transaction_id, sync_cursor.psql_tid, sync_cursor.psql_pid)
+        )
         return {transaction_id: sync_cursor}
     
     def begin(self, dbname, uid, passwd, transaction_id=None):
@@ -175,8 +195,10 @@ class WSTransactionService(netsvc.Service):
         cursor = sync_cursor.cursor
         pool = pooler.get_db_and_pool(dbname)[1]
         try:
-            self.log(netsvc.LOG_DEBUG, 'Executing from transaction ID: %s'
-                     % transaction_id)
+            self.log(netsvc.LOG_DEBUG,
+                'Executing from transaction ID: %s TID: %s PID: %s'
+                % (transaction_id, sync_cursor.psql_tid, sync_cursor.psql_pid)
+            )
             res = pool.execute_cr(cursor, uid, obj, method, *args, **kw)
         except Exception, exc:
             self.rollback(dbname, uid, passwd, transaction_id)
@@ -188,8 +210,10 @@ class WSTransactionService(netsvc.Service):
         """
         security.check(dbname, uid, passwd)
         sync_cursor = self.get_cursor(uid, transaction_id)
-        self.log(netsvc.LOG_INFO, 'Rolling back transaction ID: %s'
-                 % transaction_id)
+        self.log(netsvc.LOG_INFO,
+            'Rolling back transaction ID: %s TID: %s PID: %s'
+            % (transaction_id, sync_cursor.psql_tid, sync_cursor.psql_pid)
+        )
         return sync_cursor.rollback()
 
     def commit(self, dbname, uid, passwd, transaction_id):
@@ -197,8 +221,10 @@ class WSTransactionService(netsvc.Service):
         """
         security.check(dbname, uid, passwd)
         sync_cursor = self.get_cursor(uid, transaction_id)
-        self.log(netsvc.LOG_INFO, 'Commiting transaction ID: %s'
-                 % transaction_id)
+        self.log(netsvc.LOG_INFO,
+            'Commiting transaction ID: %s TID: %s PID: %s'
+            % (transaction_id, sync_cursor.psql_tid, sync_cursor.psql_pid)
+        )
         return sync_cursor.commit()
 
     def close(self, dbname, uid, passwd, transaction_id):
@@ -206,7 +232,10 @@ class WSTransactionService(netsvc.Service):
         """
         security.check(dbname, uid, passwd)
         sync_cursor = self.get_cursor(uid, transaction_id)
-        self.log(netsvc.LOG_INFO, 'Closing transaction ID: %s' % transaction_id)
+        self.log(netsvc.LOG_INFO,
+            'Closing transaction ID: %s TID: %s PID: %s'
+            % (transaction_id, sync_cursor.psql_tid, sync_cursor.psql_pid)
+        )
         res = sync_cursor.close()
         del self.cursors[uid][transaction_id]
         return res
