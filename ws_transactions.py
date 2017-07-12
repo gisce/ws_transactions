@@ -101,6 +101,7 @@ class WSTransactionService(netsvc.Service):
         self.exportMethod(self.rollback)
         self.exportMethod(self.commit)
         self.exportMethod(self.close)
+        self.exportMethod(self.close_connection)
         self.exportMethod(self.list)
         self.exportMethod(self.kill)
         self.log(netsvc.LOG_INFO, 'Ready for webservices transactions...')
@@ -243,5 +244,9 @@ class WSTransactionService(netsvc.Service):
         res = sync_cursor.close()
         del self.cursors[uid][transaction_id]
         return res
+
+    def close_connection(self, dbname, uid, passwd, transaction_id):
+        """Alias for close"""
+        self.close(dbname, uid, passwd, transaction_id)
 
 WSTransactionService()
