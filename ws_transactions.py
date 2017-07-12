@@ -201,8 +201,12 @@ class WSTransactionService(netsvc.Service):
             )
             res = pool.execute_cr(cursor, uid, obj, method, *args, **kw)
         except Exception, exc:
-            self.rollback(dbname, uid, passwd, transaction_id)
-            raise exc
+            #self.rollback(dbname, uid, passwd, transaction_id)
+            import traceback
+            self.log(netsvc.LOG_ERROR,
+                'Error within a transaction:\n'+
+                traceback.format_exc())
+            raise
         return res
 
     def rollback(self, dbname, uid, passwd, transaction_id):
