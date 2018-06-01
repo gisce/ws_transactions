@@ -31,7 +31,7 @@ import pooler
 from service import security
 from datetime import datetime, timedelta
 import netsvc
-import threading
+
 
 class WSCursor(object):
     """WebService Cursor.
@@ -87,6 +87,7 @@ class WSCursor(object):
         """
         return datetime.now() > self.last_access + timedelta(seconds=self.ttl)
 
+
 class WSTransactionService(netsvc.Service):
     """Service to allow XML-RPC transactions.
     """
@@ -105,8 +106,6 @@ class WSTransactionService(netsvc.Service):
         self.exportMethod(self.list)
         self.exportMethod(self.kill)
         self.log(netsvc.LOG_INFO, 'Ready for webservices transactions...')
-        self.tid = 0
-        self.tid_protect = threading.Semaphore()
         
     def log(self, log_level, message):
         """Logs througth netsvc.Logger().
@@ -133,8 +132,7 @@ class WSTransactionService(netsvc.Service):
         self.log(netsvc.LOG_INFO, 'Killing WSCursor %s...' % transaction_id)
         cursor.rollback()
         cursor.close()
-                
-        
+
     def clean(self):
         """Clean abandoned cursors.
         """
@@ -150,33 +148,23 @@ class WSTransactionService(netsvc.Service):
                     cursor.close()
                     del self.cursors[trans]
     
-    def get_transaction(self, dbname, uid, transaction_id):
-        """Get transaction for all XML-RPC.
-        """
-        database = pooler.get_db_and_pool(dbname)[0]
-        cursor = database.cursor()
-        sync_cursor = WSCursor(cursor)
-        self.log(netsvc.LOG_INFO,
-            'Creating a new transaction ID: %s TID: %s PID: %s'
-            % (transaction_id, sync_cursor.psql_tid, sync_cursor.psql_pid)
-        )
-        return {transaction_id: sync_cursor}
-    
-    def begin(self, dbname, uid, passwd, transaction_id=None):
+    def begin(self, dbname, uid, passwd):
         """Starts a transaction for XML-RPC.
         """
         security.check(dbname, uid, passwd)
         self.cursors.setdefault(uid, {})
-        user_cursors = self.cursors[uid]
-        if not transaction_id:
-            self.tid_protect.acquire()
-            self.tid += 1
-            transaction_id = self.tid
-            self.tid_protect.release()
-        if transaction_id not in user_cursors:
-            transaction = self.get_transaction(dbname, uid, transaction_id)
-            self.cursors[uid].update(transaction)
-        return transaction_id
+        database = pooler.get_db_and_pool(dbname)[0]
+        cursor = database.cursor()
+        sync_cursor = WSCursor(cursor)
+        self.log(
+            netsvc.LOG_INFO,
+            'Creating a new transaction ID: %s TID: %s PID: %s' % (
+                sync_cursor.psql_tid, sync_cursor.psql_tid,
+                sync_cursor.psql_pid
+            )
+        )
+        self.cursors[uid].update({sync_cursor.psql_tid: sync_cursor})
+        return sync_cursor.psql_tid
 
     def get_cursor(self, uid, transaction_id):
         """Gets cursor and pool.
@@ -201,7 +189,7 @@ class WSTransactionService(netsvc.Service):
                 % (transaction_id, sync_cursor.psql_tid, sync_cursor.psql_pid)
             )
             res = pool.execute_cr(cursor, uid, obj, method, *args, **kw)
-        except Exception, exc:
+        except Exception as exc:
             #self.rollback(dbname, uid, passwd, transaction_id)
             import traceback
             self.log(netsvc.LOG_ERROR,
@@ -248,5 +236,6 @@ class WSTransactionService(netsvc.Service):
     def close_connection(self, dbname, uid, passwd, transaction_id):
         """Alias for close"""
         self.close(dbname, uid, passwd, transaction_id)
+
 
 WSTransactionService()
