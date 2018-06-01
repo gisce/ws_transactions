@@ -102,6 +102,7 @@ class WSTransactionService(netsvc.Service):
         self.exportMethod(self.rollback)
         self.exportMethod(self.commit)
         self.exportMethod(self.close)
+        self.exportMethod(self.close_connection)
         self.exportMethod(self.list)
         self.exportMethod(self.kill)
         self.log(netsvc.LOG_INFO, 'Ready for webservices transactions...')
@@ -189,8 +190,12 @@ class WSTransactionService(netsvc.Service):
             )
             res = pool.execute_cr(cursor, uid, obj, method, *args, **kw)
         except Exception as exc:
-            self.rollback(dbname, uid, passwd, transaction_id)
-            raise exc
+            #self.rollback(dbname, uid, passwd, transaction_id)
+            import traceback
+            self.log(netsvc.LOG_ERROR,
+                'Error within a transaction:\n'+
+                traceback.format_exc())
+            raise
         return res
 
     def rollback(self, dbname, uid, passwd, transaction_id):
@@ -227,6 +232,10 @@ class WSTransactionService(netsvc.Service):
         res = sync_cursor.close()
         del self.cursors[uid][transaction_id]
         return res
+
+    def close_connection(self, dbname, uid, passwd, transaction_id):
+        """Alias for close"""
+        self.close(dbname, uid, passwd, transaction_id)
 
 
 WSTransactionService()
