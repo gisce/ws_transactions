@@ -128,6 +128,7 @@ class WSTransactionService(netsvc.Service):
         """Kill WSCursor by transaction_id.
         """
         security.check(dbname, uid, passwd)
+        transaction_id = str(transaction_id)
         cursor = self.get_cursor(uid, transaction_id)
         self.log(netsvc.LOG_INFO, 'Killing WSCursor %s...' % transaction_id)
         cursor.rollback()
@@ -156,19 +157,20 @@ class WSTransactionService(netsvc.Service):
         database = pooler.get_db_and_pool(dbname)[0]
         cursor = database.cursor()
         sync_cursor = WSCursor(cursor)
+        transaction_id = str(sync_cursor.psql_tid)
         self.log(
             netsvc.LOG_INFO,
             'Creating a new transaction ID: %s TID: %s PID: %s' % (
-                sync_cursor.psql_tid, sync_cursor.psql_tid,
-                sync_cursor.psql_pid
+                transaction_id, transaction_id, sync_cursor.psql_pid
             )
         )
-        self.cursors[uid].update({sync_cursor.psql_tid: sync_cursor})
-        return sync_cursor.psql_tid
+        self.cursors[uid].update({transaction_id: sync_cursor})
+        return transaction_id
 
     def get_cursor(self, uid, transaction_id):
         """Gets cursor and pool.
         """
+        transaction_id = str(transaction_id)
         if transaction_id not in self.cursors.get(uid, {}):
             raise Exception("There are no Cursor for this transacion %s"
                             % transaction_id) 
@@ -179,6 +181,7 @@ class WSTransactionService(netsvc.Service):
                 **kw):
         """Executes code with transaction_id.
         """
+        transaction_id = str(transaction_id)
         security.check(dbname, uid, passwd)
         sync_cursor = self.get_cursor(uid, transaction_id)
         cursor = sync_cursor.cursor
@@ -201,6 +204,7 @@ class WSTransactionService(netsvc.Service):
     def rollback(self, dbname, uid, passwd, transaction_id):
         """Rollbacks XML-RPC transaction.
         """
+        transaction_id = str(transaction_id)
         security.check(dbname, uid, passwd)
         sync_cursor = self.get_cursor(uid, transaction_id)
         self.log(netsvc.LOG_INFO,
@@ -212,6 +216,7 @@ class WSTransactionService(netsvc.Service):
     def commit(self, dbname, uid, passwd, transaction_id):
         """Commit XML-RPC transaction.
         """
+        transaction_id = str(transaction_id)
         security.check(dbname, uid, passwd)
         sync_cursor = self.get_cursor(uid, transaction_id)
         self.log(netsvc.LOG_INFO,
@@ -223,6 +228,7 @@ class WSTransactionService(netsvc.Service):
     def close(self, dbname, uid, passwd, transaction_id):
         """Closes XML-RPC transaction.
         """
+        transaction_id = str(transaction_id)
         security.check(dbname, uid, passwd)
         sync_cursor = self.get_cursor(uid, transaction_id)
         self.log(netsvc.LOG_INFO,
@@ -235,6 +241,7 @@ class WSTransactionService(netsvc.Service):
 
     def close_connection(self, dbname, uid, passwd, transaction_id):
         """Alias for close"""
+        transaction_id = str(transaction_id)
         self.close(dbname, uid, passwd, transaction_id)
 
 
