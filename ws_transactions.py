@@ -31,16 +31,37 @@ import pooler
 from service import security
 from datetime import datetime, timedelta
 import netsvc
+from tools.config import config
+from uuid import uuid4
+from redis import from_url
+
+
+class SnapshotsStore(object):
+    def __init__(self, connection):
+        self.prefix = 'psql:snapshot:'
+        self.connection = connection
+
+    def get(self, transaction_id):
+        key = '{}{}'.format(self.prefix, transaction_id)
+        return self.connection.get(key)
+
+    def set(self, transaction_id, snapshot_id):
+        key = '{}{}'.format(self.prefix, transaction_id)
+        self.connection.set(key, snapshot_id)
 
 
 class WSCursor(object):
     """WebService Cursor.
     """
-    def __init__(self, cursor, ttl=3600):
+    def __init__(self, cursor, snapshot_id=None, ttl=3600):
         self._cursor = cursor
         self.create_date = datetime.now()
         self.last_access = datetime.now()
         self.ttl = ttl
+        self.snapshot_id = snapshot_id
+        self.id = uuid4().hex
+        if snapshot_id:
+            self._cursor.execute('SET TRANSACTION SNAPSHOT %s', (snapshot_id, ))
         
     @property
     def cursor(self):
@@ -64,6 +85,12 @@ class WSCursor(object):
         """
         self._cursor.execute('''
             select pg_backend_pid()
+        ''')
+        return self._cursor.fetchone()[0]
+
+    def export(self):
+        self._cursor.execute('''
+            select pg_export_snapshot()
         ''')
         return self._cursor.fetchone()[0]
     
@@ -106,6 +133,7 @@ class WSTransactionService(netsvc.Service):
         self.exportMethod(self.list)
         self.exportMethod(self.kill)
         self.log(netsvc.LOG_INFO, 'Ready for webservices transactions...')
+        self.snapshotStore = SnapshotsStore(from_url(config['redis_url']))
         
     def log(self, log_level, message):
         """Logs througth netsvc.Logger().
@@ -157,25 +185,26 @@ class WSTransactionService(netsvc.Service):
         database = pooler.get_db_and_pool(dbname)[0]
         cursor = database.cursor()
         sync_cursor = WSCursor(cursor)
-        transaction_id = str(sync_cursor.psql_tid)
+        transaction_id = sync_cursor.id
         self.log(
             netsvc.LOG_INFO,
-            'Creating a new transaction ID: %s TID: %s PID: %s' % (
+            'Creating a new sync cursor ID: %s TID: %s PID: %s' % (
                 transaction_id, transaction_id, sync_cursor.psql_pid
             )
         )
-        self.cursors[uid].update({transaction_id: sync_cursor})
-        return transaction_id
+        snapshot_id = sync_cursor.export()
+        self.snapshotStore.set(sync_cursor.id, snapshot_id)
+        sync_cursor.close()
+        return sync_cursor.id
 
     def get_cursor(self, uid, transaction_id):
         """Gets cursor and pool.
         """
-        transaction_id = str(transaction_id)
-        if transaction_id not in self.cursors.get(uid, {}):
+        snapshot_id = self.snapshotStore.get(transaction_id)
+        if not snapshot_id:
             raise Exception("There are no Cursor for this transacion %s"
-                            % transaction_id) 
-        cursor = self.cursors[uid][transaction_id]
-        return cursor
+                            % transaction_id)
+        return snapshot_id
 
     def execute(self, dbname, uid, passwd, transaction_id, obj, method, *args,
                 **kw):
@@ -183,8 +212,10 @@ class WSTransactionService(netsvc.Service):
         """
         transaction_id = str(transaction_id)
         security.check(dbname, uid, passwd)
-        sync_cursor = self.get_cursor(uid, transaction_id)
-        cursor = sync_cursor.cursor
+        snapshot_id = self.get_cursor(uid, transaction_id)
+        database = pooler.get_db_and_pool(dbname)[0]
+        cursor = database.cursor()
+        sync_cursor = WSCursor(cursor, snapshot_id)
         pool = pooler.get_db_and_pool(dbname)[1]
         try:
             self.log(netsvc.LOG_DEBUG,
