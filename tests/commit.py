@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import xmlrpclib
+from __future__ import print_function
+
+try:
+    import xmlrpclib
+except ImportError:
+    from xmlrpc import client as xmlrpclib
 
 HOST = 'localhost'
 PORT = 8069
@@ -13,23 +18,23 @@ def run_test():
     uid = sock.login(DBNAME, USER, PASS)
     sock = xmlrpclib.ServerProxy('http://%s:%d/xmlrpc/ws_transaction'
                                  % (HOST, PORT))
-    print "UID: %s PASS: %s" % (uid, PASS)
+    print("UID: %s PASS: %s" % (uid, PASS))
     tid = sock.begin(DBNAME, uid, PASS)
-    print "Opening transaction %s..." % tid
+    print("Opening transaction %s..." % tid)
     partner1 = sock.execute(DBNAME, uid, PASS, tid, 'res.partner', 'read', [1],
                             ['name'])
-    print "Print before write", partner1[0]
+    print("Print before write", partner1[0])
     sock.execute(DBNAME, uid, PASS, tid, 'res.partner', 'write', [1],
                  {'name': '%s mod' % partner1[0]['name']})
     partner1 = sock.execute(DBNAME, uid, PASS, tid, 'res.partner', 'read', [1],
                             ['name'])
-    print "Print after write", partner1[0]
-    print "Commit!"
+    print("Print after write", partner1[0])
+    print("Commit!")
     sock.commit(DBNAME, uid, PASS, tid)
     partner1 = sock.execute(DBNAME, uid, PASS, tid, 'res.partner', 'read', [1],
                             ['name'])
-    print "Print after commit", partner1[0]
-    print "Clossing..."
+    print("Print after commit", partner1[0])
+    print("Clossing...")
     sock.close(DBNAME, uid, PASS, tid)
 
 if __name__ == "__main__":
